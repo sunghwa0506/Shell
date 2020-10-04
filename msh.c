@@ -252,7 +252,6 @@ int main()
                 {
                     int status;
                     wait( & status );
-                    printf("hello\n");
                 }
 
             }
