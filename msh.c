@@ -204,16 +204,19 @@ int main()
             }
 
             //If a user type cd
+            //excute this code
             if(strcmp(token[0],"cd")==0)
             {
                 chdir(token[1]);
             }
-            
+            //If commends need to call fork
             else
             {
 
                 pid_t pid = fork( );
 
+                //Save 15 pids in showpids array 
+                //if pid >0 
                 if(pid !=0&&showpids_last<15)
                 {
                     showpids[showpids_last]=pid;
@@ -221,14 +224,16 @@ int main()
                 }
 
 
-
+                //Child processes
                 if( pid == 0 )
                 {
                     int ret = execvp( token[0], &token[0] ); 
-
+                    //Print error if execvp returns -1
                     if( ret == -1 )
                     {
                         int i;
+
+                        //To eleminate "\n" in the comment
                         char temp[MAX_COMMAND_SIZE] = "";
                        
                         for(i=0;i<strlen(cmd_str)-1;i++)
@@ -242,10 +247,12 @@ int main()
                     return 0;
                 }
 
+                //Wait till child process is done
                 else 
                 {
                     int status;
                     wait( & status );
+                    printf("hello\n");
                 }
 
             }
@@ -254,7 +261,7 @@ int main()
 
 
 
-
+            //Free dynamic allocated memory
             free( working_root );
         }
 
