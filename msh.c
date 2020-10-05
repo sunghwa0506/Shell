@@ -256,6 +256,11 @@ int main()
             fork_or_not=0;
         }
 
+        else if(strcmp(cmd_str,"\n")==0)
+        {
+            fork_or_not=0;
+        }
+
 
         //If user called system call
         //fork_or_not is 1,
