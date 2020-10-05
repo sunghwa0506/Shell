@@ -23,17 +23,68 @@ ID: 1001723723
 #define MAX_NUM_ARGUMENTS 10     // Mav shell only supports ten arguments
 
 //To save comment that a user types
-//It take int pointer, char arrary and cmd_str as parameters
+//It take int pointer, char arrary and cmd_str and char array as parameters
 //This function will add 1 to int pointer to indicate this function is called.
-void save_history(int *history_last_ptr,char history[15][MAX_COMMAND_SIZE],char *cmd_str )
+void save_history(int *history_last_ptr,char history[15][MAX_COMMAND_SIZE],char *cmd_str,char history_over_15_store_1[MAX_COMMAND_SIZE] )
 {
-    //Save until 15th comments
+    //Save till 15th comments
     if(*history_last_ptr<15)
     {
         strcpy(history[*history_last_ptr],cmd_str);
-        *history_last_ptr+=1;
     }
+    //If a user put more than 15 comments
+    else if(*history_last_ptr>=15)
+    {
+        //Store the first command so that it can be printed
+        //if a user type !1
+        //History[0] will be replace with history[1]
+        //when a user put new command
+        strcpy(history_over_15_store_1,history[0]);
+
+        //Move 2 to 15 to 1 to 14
+        //so that the new command can be placed in 15 
+        int i;
+        for(i=0;i<14;i++)
+        {
+            strcpy(history[i],history[i+1]);
+        }
+
+        //Place the new command in 15th position
+        strcpy(history[14],cmd_str);
+
+
+    }
+
+    *history_last_ptr+=1;
 }
+
+//This function stores pids in an array and return showpids_last to indicate how many pids are stored
+//It take int array, pid_t and int as arguments
+int save_pids(int showpids[MAX_COMMAND_SIZE], pid_t pid, int showpids_last)
+{
+    //Save pids till 15th
+    if(showpids_last<15)
+    {
+        showpids[showpids_last]=pid;
+    }
+    
+    else if(showpids_last>=15)
+    {
+        //Move erase the oldest and add newest pid
+        int i;
+        for(i=0;i<14;i++)
+        {
+            showpids[i]=showpids[i+1];
+        }
+
+        showpids[14]=pid;
+    }
+    showpids_last+=1;
+
+    return showpids_last;
+}
+
+
 
 //To ask user again to type an input.
 //It takes cmd_str as parameters
@@ -44,6 +95,8 @@ void ask_input(char *cmd_str)
     printf ("msh> ");
     fgets (cmd_str, MAX_COMMAND_SIZE, stdin);
 }
+
+
 
 int main()
 {
@@ -60,17 +113,20 @@ int main()
     //To save command that a user put
     //Used 2D array
     char history[15][MAX_COMMAND_SIZE]={""};
-
+    //After add command to array 'history', 1 is added to history_last
+    char history_over_15_store_1[MAX_COMMAND_SIZE]="";
+    
     //To indicate the last position of array 'history' 
     int history_last = 0;
 
-    //After add command to array 'history', 1 is added to history_last
+
     int * history_last_ptr = &history_last;
 
     //To indicate if fork should be called or not
     //Some commend such as history, cd, showpids !n do not need to fork
     int fork_or_not=1;
-    
+
+
     while( 1 )
     {
         // Print out the msh prompt
@@ -80,7 +136,7 @@ int main()
         // maximum command that will be read is MAX_COMMAND_SIZE
         fgets (cmd_str, MAX_COMMAND_SIZE, stdin);
         //Call save_history function to save user's input
-        save_history(history_last_ptr,history,cmd_str);
+        save_history(history_last_ptr,history,cmd_str,history_over_15_store_1);
         //Defalt setting for calling fork is 1
         //IF fork is not neccesary, it will be 0
         fork_or_not=1;
@@ -94,10 +150,9 @@ int main()
             while(strcmp(cmd_str,"\n") == 0)
             {
                 ask_input(cmd_str);
-                save_history(history_last_ptr,history,cmd_str);
+                save_history(history_last_ptr,history,cmd_str,history_over_15_store_1);
             }
         }
-        
         //Stop the program if user types "quit" or "exit"
         else if(strcmp(cmd_str,"quit\n")==0||(strcmp(cmd_str,"exit\n")==0))
         {
@@ -111,35 +166,63 @@ int main()
         //a user put !1 to !9
         else if((strcmp(cmd_str,"!1\n")>=0&&strcmp(cmd_str,"!1\n")<=8))
         {
-            //print error if no commend in history
-            //Do not need to call fork.
-            //Go to begining of first while loop
-            if(strcmp(history[strcmp(cmd_str,"!1\n")],"")==0)
-            {
-                printf("Command not in history.\n");
-                fork_or_not=0;
+            //if number of commands that a user put is less than 15
+            if(*history_last_ptr<=15)
+            {   
+                //print error if no commend in history
+                //Do not need to call fork.
+                //Return to begining of first while loop
+                if(strcmp(history[strcmp(cmd_str,"!1\n")],"")==0)
+                {
+                    printf("Command not in history.\n");
+                    fork_or_not=0;
+                }
+                //If commend in the chosen position, copy that string to cmd_str so that it can be tokenize again
+                else
+                {
+                    strcpy(cmd_str,history[strcmp(cmd_str,"!1\n")]);
+                }
             }
-            //If commend in the chosen position, copy that string to cmd_str so that it can be tokenize again
+            //if number of commands that a user put is greater than 15
+            //the position is changed.
             else
             {
-                strcpy(cmd_str,history[strcmp(cmd_str,"!1\n")]);
+                //History[0] is not stored anymore in the new position
+                //Use history_over_15_store_1 to bring history[0]
+                if(strcmp(cmd_str,"!1\n")==0)
+                {
+                    strcpy(cmd_str,history_over_15_store_1);
+                }
+                else
+                {
+                strcpy(cmd_str,history[strcmp(cmd_str,"!1\n")-1]);
+                }            
             }
+            
         }
 
         //Compare string with !1 and get strcmp
         //If 38<= strcmp <= 43
         //a user put !10 to !15
+        //Same algorithm for !1 to !9
         else if((strcmp(cmd_str,"!1\n")>=38&&strcmp(cmd_str,"!1\n")<=43))
         {
             //same algorithm for !1 to !9
-            if(strcmp(history[strcmp(cmd_str,"!1\n")-29],"")==0)
+            if(*history_last_ptr<=15)
             {
-                printf("Command not in history.\n");
-                fork_or_not=0;
+                if(strcmp(history[strcmp(cmd_str,"!1\n")-29],"")==0)
+                {
+                    printf("Command not in history.\n");
+                    fork_or_not=0;
+                }
+                else
+                {
+                    strcpy(cmd_str,history[strcmp(cmd_str,"!1\n")-29]);
+                }
             }
             else
             {
-                strcpy(cmd_str,history[strcmp(cmd_str,"!1\n")-29]);
+                strcpy(cmd_str,history[strcmp(cmd_str,"!1\n")-30]);
             }
         }
 
@@ -148,10 +231,12 @@ int main()
         //It diactivate fork.
         if(strcmp(cmd_str,"showpids\n")==0)
         {
-            int i;
-            for(i=0;i<=showpids_last-1;i++)
+ 
+            int i=0;
+            while(i <=14 && showpids[i]!=0)
             {
                 printf("%d: %d\n",i+1,showpids[i]);
+                i+=1;
             }
             fork_or_not=0;
         }
@@ -161,11 +246,13 @@ int main()
         //It diactivate fork.
         else if(strcmp(cmd_str,"history\n")==0)
         {
-            int i;
-            for(i=0;i<=*history_last_ptr-1;i++)
+            int i=0;
+            while(i <=14 && strcmp(history[i],"")!=0)
             {
                 printf("%d: %s",i+1,history[i]);
+                i+=1;
             }
+
             fork_or_not=0;
         }
 
@@ -217,10 +304,9 @@ int main()
 
                 //Save 15 pids in showpids array 
                 //if pid >0 
-                if(pid !=0&&showpids_last<15)
+                if(pid !=0)
                 {
-                    showpids[showpids_last]=pid;
-                    showpids_last++;
+                    showpids_last = save_pids(showpids,pid,showpids_last);
                 }
 
 
